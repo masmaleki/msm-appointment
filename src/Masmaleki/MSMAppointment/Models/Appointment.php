@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Models;
+namespace Masmaleki\MSMAppointment\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class appointment extends Model
+class Appointment extends Model
 {
     use HasFactory;
 }

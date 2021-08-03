@@ -2,7 +2,7 @@
 
 namespace Masmaleki\MSMAppointment\Http\Controllers;
 
-use App\Models\appointment;
+use Masmaleki\MSMAppointment\Models\Appointment;
 use Illuminate\Http\Request;
 use Spatie\GoogleCalendar\Event;
 use App\Http\Controllers\Controller;
@@ -24,8 +24,11 @@ class AppointmentController extends Controller
             'endDateTime' => Carbon::now()->addHour(),
         ]);
         $events = Event::get();
-
         dd($events);
+
+        // $appointments = Appointment::all();
+
+        // return view('msmapointments::index', compact('appointments'));
     }
 
     /**

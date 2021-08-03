@@ -4,6 +4,7 @@ namespace Masmaleki\MSMAppointment;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Masmaleki\MSMAppointment\Factories\MSMAppointmentFactory;
 
 class AppointmentServiceProvider extends ServiceProvider
 {
@@ -20,7 +21,7 @@ class AppointmentServiceProvider extends ServiceProvider
             __DIR__ . '/config/MSMAppointment.php' => base_path('config/MSMAppointment.php'),
             __DIR__ . '/migrations' => $this->app->databasePath() . '/migrations'
         ]);
-        // $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
+        $this->loadViewsFrom(__DIR__.'/resources/views', 'msmapointments');
     }
 
     /**
@@ -33,6 +34,12 @@ class AppointmentServiceProvider extends ServiceProvider
         $this->registerFactory($this->app);
         $this->registerManager($this->app);
         $this->registerRoutes($this->app);
+        
+        $this->app->bind(GoogleCalendar::class, function () {
+            $config = config('MSMAppointment');
+
+            return MSMAppointmentFactory::createForCalendarId($config['calendar_id']);
+        });
     }
 
     /**

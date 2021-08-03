@@ -2,82 +2,37 @@
 
 namespace Masmaleki\MSMAppointment\Factories;
 
-use GuzzleHttp\Client;
-use Mautic\Auth\ApiAuth;
-use Illuminate\Support\Arr;
-use Mautic\Auth\OAuthClient;
-use Masmaleki\Mautic\Models\MauticConsumer;
-use GuzzleHttp\Exception\ClientException;
+use Google_Client;
+use Google_Service_Calendar;
 
 class MSMAppointmentFactory
 {
-
-    /**
-     * Make a new Mautic url.
-     *
-     * @param string $endpoints
-     * @return url
-     */
-    protected function getMSMAppointmentUrl($endpoints = null)
+    public static function createForCalendarId(string $calendarId): GoogleCalendar
     {
-        if (!empty($endpoints))
-            return config('MSMAppointmentFactory.connections.main.baseUrl') . '/' . $endpoints;
-        else
-            return config('MSMAppointmentFactory.connections.main.baseUrl') . '/';
+        $config = config('google-calendar');
+
+        $client = self::createAuthenticatedGoogleClient($config);
+
+        $service = new Google_Service_Calendar($client);
+
+        return self::createCalendarClient($service, $calendarId);
     }
 
-    /**
-     * Check AccessToken Expiration Time
-     * @param $expireTimestamp
-     * @return bool
-     */
-    public function checkExpirationTime($expireTimestamp)
+    protected static function createServiceAccountClient(array $authProfile): Google_Client
     {
-        $now = time();
+        $client = new Google_Client;
 
-        if ($now > $expireTimestamp)
-            return true;
-        else
-            return false;
+        $client->setScopes([
+            Google_Service_Calendar::CALENDAR,
+        ]);
+
+        $client->setAuthConfig($authProfile['credentials_json']);
+
+        return $client;
     }
-
-    /**
-     * Make a new Mautic client.
-     *
-     * @param array $config
-     * @return \MSMAppointment\Config
-     */
-    public function make(array $config)
+    
+    protected static function createCalendarClient(Google_Service_Calendar $service, string $calendarId): GoogleCalendar
     {
-
-        $config = $this->getConfig($config);
-        return $this->getClient($config);
+        return new GoogleCalendar($service, $calendarId);
     }
-
-    /**
-     * Get the configuration data.
-     *
-     * @param array $config
-     *
-     * @throws \InvalidArgumentException
-     *
-     * @return array
-     */
-    protected function getConfig(array $config)
-    {
-        $keys = ['clientKey', 'clientSecret'];
-
-        foreach ($keys as $key)
-        {
-            if (!array_key_exists($key, $config))
-            {
-                throw new \InvalidArgumentException('The MSMAppointment client requires configuration.');
-            }
-        }
-
-        return Arr::only($config, ['version', 'baseUrl', 'clientKey', 'clientSecret', 'callback']);
-    }
-
-
-
 }
