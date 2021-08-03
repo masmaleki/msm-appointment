@@ -18,15 +18,13 @@
         "phpunit/phpunit": "~4.1"
     },
     "autoload": {
-        "psr-0": {
-            "Masmaleki\\MSMAppointment\\": "src/"
-        },
         "psr-4": {
             "Masmaleki\\MSMAppointment\\": "src/Masmaleki/MSMAppointment/"
         }
     },
     "autoload-dev": {
         "psr-4": {
+            "Masmaleki\\MSMAppointment\\": "src/Masmaleki/MSMAppointment/"
         }
     },
     "minimum-stability": "dev"

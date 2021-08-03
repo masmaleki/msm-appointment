@@ -6,6 +6,7 @@
 |--------------------------------------------------------------------------
 |
 */
+use Masmaleki\MSMAppointment\Http\Controllers\AppointmentController;
 
 $middleware = config('MSMAppointment.routes-middlewares');
 //appointment
