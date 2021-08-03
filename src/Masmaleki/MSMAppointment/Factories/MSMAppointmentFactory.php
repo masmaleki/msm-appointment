@@ -9,7 +9,7 @@ use Mautic\Auth\OAuthClient;
 use Masmaleki\Mautic\Models\MauticConsumer;
 use GuzzleHttp\Exception\ClientException;
 
-class MauticFactory
+class MSMAppointmentFactory
 {
 
     /**
