@@ -1,6 +1,6 @@
 <?php
 
-namespace Masmaleki\Mautic;
+namespace Masmaleki\MSMAppointment;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
