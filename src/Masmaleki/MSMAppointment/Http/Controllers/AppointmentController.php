@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace Masmaleki\MSMAppointment\Http\Controllers;
 
 use App\Models\appointment;
 use Illuminate\Http\Request;

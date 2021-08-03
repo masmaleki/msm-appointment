@@ -20,6 +20,7 @@ class AppointmentServiceProvider extends ServiceProvider
             __DIR__ . '/config/MSMAppointment.php' => base_path('config/MSMAppointment.php'),
             __DIR__ . '/migrations' => $this->app->databasePath() . '/migrations'
         ]);
+        // $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
     }
 
     /**
@@ -64,7 +65,7 @@ class AppointmentServiceProvider extends ServiceProvider
             $config  = $app['config'];
             $factory = $app['MSMAppointment.factory'];
 
-            return new Mautic($config, $factory);
+            return new MSMAppointment($config, $factory);
         });
 
         $app->alias('MSMAppointment', 'Masmaleki\MSMAppointment\MSMAppointment');
@@ -77,7 +78,7 @@ class AppointmentServiceProvider extends ServiceProvider
      */
     protected function registerRoutes(Application $app)
     {
-        $app['router']->group(['namespace' => 'Masmaleki\MSMAppointment\Http\Controllers', "prefix" => "Appointment"], function () {
+        $app['router']->group(['namespace' => 'Masmaleki\MSMAppointment\Http\Controllers', "prefix" => "msm"], function () {
             require __DIR__ . '/Http/routes.php';
         });
     }
