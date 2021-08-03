@@ -1,0 +1,33 @@
+{
+    "name": "masmaleki/msm-appointment",
+    "description": "Simple appointment system integrated with google calendar api\n",
+    "keywords": ["laravel", "appointment", "lumen", "google-calendar"],
+    "license": "MIT",
+    "homepage": "http://github.com/Masmaleki/msm-appointment",
+    "authors": [
+        {
+            "name": "Mohammad Sadegh Maleki",
+            "email": "masmaleki@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.1.8",
+        "spatie/laravel-google-calendar": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~4.1"
+    },
+    "autoload": {
+        "psr-0": {
+            "Masmaleki\\MSMAppointment\\": "src/"
+        },
+        "psr-4": {
+            "Masmaleki\\MSMAppointment\\": "src/Masmaleki/MSMAppointment/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+        }
+    },
+    "minimum-stability": "dev"
+}
