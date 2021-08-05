@@ -3,7 +3,7 @@
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateAppointmentsTable extends Migration {
+class CreateAppointmentUsersTable extends Migration {
 
     /**
      * Run the migrations.
@@ -12,12 +12,12 @@ class CreateAppointmentsTable extends Migration {
      */
     public function up()
     {
-        Schema::create('appointments', function($table) {
+        Schema::create('appointment_users', function($table) {
             $table->increments('id');
-            $table->integer('user_id');
-            $table->string('user-email');
-            $table->string('user-phone');
-            $table->datetime('appointment_datetime');
+            $table->integer('calendar_id');
+            $table->string('email')->nullable();
+            $table->string('name')->nullable(); 
+            $table->string('reference_table_id')->nullable(); 
             $table->timestamps();
         });
     }
@@ -29,7 +29,6 @@ class CreateAppointmentsTable extends Migration {
      */
     public function down()
     {
-        Schema::drop('appointments');
+        Schema::drop('appointment_users');
     }
-
 }

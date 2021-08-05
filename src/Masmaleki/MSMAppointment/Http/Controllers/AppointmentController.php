@@ -22,8 +22,8 @@ class AppointmentController extends Controller
             'name' => 'A new event',
             'startDateTime' => Carbon::now(),
             'endDateTime' => Carbon::now()->addHour(),
-        ]);
-        $events = Event::get();
+        ],'3uci6376bktqett48u8cd7acog@group.calendar.google.com');
+        $events = Event::get(null,null,[],'3uci6376bktqett48u8cd7acog@group.calendar.google.com');
 
         dd($events);
     }
