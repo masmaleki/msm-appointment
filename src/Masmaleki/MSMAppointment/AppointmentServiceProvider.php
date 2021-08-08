@@ -18,9 +18,10 @@ class AppointmentServiceProvider extends ServiceProvider
         // Publish Configuration File to base Path.
         $this->publishes([
             __DIR__ . '/config/MSMAppointment.php' => base_path('config/MSMAppointment.php'),
-            __DIR__ . '/migrations' => $this->app->databasePath() . '/migrations'
+            __DIR__ . '/migrations' => $this->app->databasePath() . '/migrations',
+            __DIR__ . '/resources/views' => base_path('/resources/views/vendor/msm-appointments')
         ]);
-        // $this->loadRoutesFrom(__DIR__.'/Http/routes.php');
+        $this->loadViewsFrom(__DIR__.'/resources/views', 'msm-appointments');
     }
 
     /**

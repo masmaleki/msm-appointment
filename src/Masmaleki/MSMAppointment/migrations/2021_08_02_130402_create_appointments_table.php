@@ -14,10 +14,15 @@ class CreateAppointmentsTable extends Migration {
     {
         Schema::create('appointments', function($table) {
             $table->increments('id');
-            $table->integer('user_id');
-            $table->string('user-email');
-            $table->string('user-phone');
-            $table->datetime('appointment_datetime');
+            $table->string('name');
+            $table->integer('appointment_user_id');
+            $table->string('start_date');
+            $table->text('link');
+            $table->string('event_id');
+            $table->string('client_email');
+            $table->string('client_name');
+            $table->string('client_phone');
+            $table->text('client_description');
             $table->timestamps();
         });
     }

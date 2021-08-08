@@ -21,11 +21,14 @@ return [
     |
     */
 
-    'routes-middlewares' => [
+    'admin_middlewares' => [
+        'web',
         'verified',
         'auth',
-        'can:panel-access',
-        'menuitem:666',
+    ],
+
+    'user_middlewares' => [
+        'web'
     ],
 
 ];

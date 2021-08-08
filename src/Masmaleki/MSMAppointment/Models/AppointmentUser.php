@@ -11,7 +11,7 @@ class AppointmentUser extends Model
      *
      * @var string
      */
-    protected $table = 'msm_appointment_users';
+    protected $table = 'appointment_users';
 
     /**
      * The attributes that are mass assignable.
