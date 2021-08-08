@@ -29,4 +29,9 @@ class Appointment extends Model
         'client_phone',
         'client_description',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(AppointmentUser::class,'appointment_user_id');
+    }
 }
