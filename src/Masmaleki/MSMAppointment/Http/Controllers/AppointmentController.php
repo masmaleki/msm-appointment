@@ -53,11 +53,11 @@ class AppointmentController extends Controller
             'client_email' => 'string',
             'client_phone' => 'string',
         ]);
-
+        $requestDate = Carbon::createFromFormat('d/m/Y', $request->get('start_date'))->format('Y-m-d').'T'.$request->get('start_time');
         $user = AppointmentUser::findOrFail($request->get('user_id'));
 
         $calendarId = $user->calendar_id;
-        $startDate = Carbon::parse($request->get('start_date'),'Asia/Tbilisi');
+        $startDate = Carbon::parse($requestDate,'Asia/Tbilisi');
         $endDate = clone $startDate;
         $endDate = $endDate->addHour();
         $events = Event::get(Carbon::now(),null,[],$calendarId);
