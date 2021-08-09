@@ -98,6 +98,8 @@ class AppointmentController extends Controller
             'client_phone' => $request->get('client_phone'),
         ]); 
 
+        $appointment->has_newsletter = $request->get('has_newsletter') == 'on' ? true : false;
+
         return redirect()->back()->with('appointment', $appointment);
     }
 
