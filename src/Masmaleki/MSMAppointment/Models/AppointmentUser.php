@@ -33,13 +33,18 @@ class AppointmentUser extends Model
                 $endDate = Carbon::parse($event->googleEvent->end->dateTime);
                 
                 $tempDate = clone $startDate;
-                $dif = $startDate->diff($endDate)->format('%H:%I:%S');
+                $dif = $startDate->diff($endDate)->format('%H');
 
                 $date = $tempDate->format('H') == 00 ? $startDate->addDays(1)->format('d/m/Y') : $startDate->format('d/m/Y');
                 $times[$date] = [];
+
                 array_push($times[$date], $tempDate->format('H'));
 
                 for ($i=1; $i <= $dif; $i++) { 
+                    $clone = clone $tempDate;
+                    if ($clone->addHour() == $endDate) {
+                        continue;
+                    }
                     array_push($times[$date], $times[$date][$i] = $tempDate->addHour()->format('H'));
                 }
 
