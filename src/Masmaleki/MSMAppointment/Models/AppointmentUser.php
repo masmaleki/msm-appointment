@@ -42,7 +42,7 @@ class AppointmentUser extends Model
 
                 for ($i=1; $i <= $dif; $i++) { 
                     $clone = clone $tempDate;
-                    if ($clone->addHour() == $endDate) {
+                    if ($clone->addHour() == $endDate && $clone->format('i') == '00') {
                         continue;
                     }
                     array_push($times[$date], $times[$date][$i] = $tempDate->addHour()->format('H'));
