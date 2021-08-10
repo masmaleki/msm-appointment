@@ -65,13 +65,12 @@ class AppointmentController extends Controller
         foreach ($events as $key => $event) {
             $eventStart = Carbon::parse($event->googleEvent->start->dateTime,'Asia/Tbilisi');
             $eventEnd = Carbon::parse($event->googleEvent->end->dateTime,'Asia/Tbilisi');
-            if ($startDate->gte($eventStart) && $eventEnd->gte($startDate) ||
-                $endDate->gte($eventStart) && $eventEnd->gte($endDate) || 
+            if ($startDate->gt($eventStart) && $startDate->lt($eventEnd) ||
+                $endDate->gt($eventStart) && $endDate->lt($eventEnd) || 
                 $startDate->lte($eventStart) && $endDate->gte($eventEnd)) {
                 return redirect()->back()->withErrors('This time is not availble');
             }
         }
-
         try {
             $event = Event::create([  
                 'name' => $request->get('name'),
@@ -80,18 +79,32 @@ class AppointmentController extends Controller
                 'description' => $request->get('client_description') 
                                 . ' | Name: ' .$request->get('client_name')
                                 . ' | Email: ' .$request->get('client_email')
-                                . ' | Phone: ' .$request->get('client_phone')
+                                . ' | Phone: ' .$request->get('client_phone'),
+                'visibility' => 'public'
             ],$calendarId);
         } catch (\Throwable $th) {
             return redirect()->back()->withErrors('Operation Failed');
         }
+
+        $eventLink = $event->googleEvent->htmlLink;
+        $url_components = parse_url($eventLink);
+        parse_str($url_components['query'], $eventUrlParams);
+        $eid = $eventUrlParams['eid'];
+
+        $params = [
+            'action' => 'TEMPLATE',
+            'tmeid' => $eid,
+            'tmsrc' => $calendarId
+        ];
+
+        $link = "https://calendar.google.com/event?" . http_build_query($params);
 
         $appointment = Appointment::create([
             'name' => $request->get('name'),
             'start_date' => $event->googleEvent->start->dateTime,
             'appointment_user_id' => $user->id,
             'event_id' => $event->googleEvent->id,
-            'link' => $event->googleEvent->htmlLink,
+            'link' => $link,
             'client_description' => $request->get('client_description'),
             'client_name' => $request->get('client_name'),
             'client_email' => $request->get('client_email'),
