@@ -28,6 +28,8 @@ class Appointment extends Model
         'client_name',
         'client_phone',
         'client_description',
+        'uuid',
+        'status'
     ];
 
     public function user()

@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use DateTime;
 use Masmaleki\MSMAppointment\Models\AppointmentUser;
+use Illuminate\Support\Str;
 
 class AppointmentController extends Controller
 {
@@ -32,8 +33,9 @@ class AppointmentController extends Controller
     {
         $edit = false;
         $users = AppointmentUser::all();
+        $disableDates = AppointmentUser::disableDates($users);
 
-        return view('msm-appointments::create_edit', compact('edit','users'));
+        return view('msm-appointments::create_edit', compact('edit', 'users','disableDates'));
     }
 
     /**
@@ -47,57 +49,44 @@ class AppointmentController extends Controller
         $this->validate($request, [
             'name' => 'required|string',
             'start_date' => 'string',
+            'start_time' => 'string',
             'user_id' => 'string',
             'client_description' => 'string',
             'client_name' => 'string',
             'client_email' => 'string',
             'client_phone' => 'string',
         ]);
-        $requestDate = Carbon::createFromFormat('d/m/Y', $request->get('start_date'))->format('Y-m-d').'T'.$request->get('start_time');
+        $requestDate = Carbon::createFromFormat('d/m/Y', $request->get('start_date'))->format('Y-m-d') . 'T' . $request->get('start_time');
         $user = AppointmentUser::findOrFail($request->get('user_id'));
 
         $calendarId = $user->calendar_id;
-        $startDate = Carbon::parse($requestDate,'Asia/Tbilisi');
+        $startDate = Carbon::parse($requestDate, 'Asia/Tbilisi');
         $endDate = clone $startDate;
         $endDate = $endDate->addHour();
-        $events = Event::get(Carbon::now(),null,[],$calendarId);
-        
-        foreach ($events as $key => $event) {
-            $eventStart = Carbon::parse($event->googleEvent->start->dateTime,'Asia/Tbilisi');
-            $eventEnd = Carbon::parse($event->googleEvent->end->dateTime,'Asia/Tbilisi');
-            if ($startDate->gt($eventStart) && $startDate->lt($eventEnd) ||
-                $endDate->gt($eventStart) && $endDate->lt($eventEnd) || 
-                $startDate->lte($eventStart) && $endDate->gte($eventEnd)) {
-                return redirect()->back()->withErrors('This time is not availble');
-            }
+        $events = Event::get(Carbon::now(), null, [], $calendarId);
+
+        if (!self::checkValidDate($events, $startDate, $endDate)) {
+            return redirect()->back()->withErrors('This time is not availble');
         }
+
         try {
-            $event = Event::create([  
+            $event = Event::create([
                 'name' => $request->get('name'),
-                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339),'Asia/Tbilisi'),
-                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339),'Asia/Tbilisi'),
-                'description' => $request->get('client_description') 
-                                . ' | Name: ' .$request->get('client_name')
-                                . ' | Email: ' .$request->get('client_email')
-                                . ' | Phone: ' .$request->get('client_phone'),
+                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
+                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
+                'description' => $request->get('client_description')
+                    . ' | Name: ' . $request->get('client_name')
+                    . ' | Email: ' . $request->get('client_email')
+                    . ' | Phone: ' . $request->get('client_phone'),
                 'visibility' => 'public'
-            ],$calendarId);
+            ], $calendarId);
         } catch (\Throwable $th) {
             return redirect()->back()->withErrors('Operation Failed');
         }
 
-        $eventLink = $event->googleEvent->htmlLink;
-        $url_components = parse_url($eventLink);
-        parse_str($url_components['query'], $eventUrlParams);
-        $eid = $eventUrlParams['eid'];
+        $link = self::getLink($event, $calendarId);
 
-        $params = [
-            'action' => 'TEMPLATE',
-            'tmeid' => $eid,
-            'tmsrc' => $calendarId
-        ];
-
-        $link = "https://calendar.google.com/event?" . http_build_query($params);
+        $uuid = self::getUUID();
 
         $appointment = Appointment::create([
             'name' => $request->get('name'),
@@ -109,7 +98,9 @@ class AppointmentController extends Controller
             'client_name' => $request->get('client_name'),
             'client_email' => $request->get('client_email'),
             'client_phone' => $request->get('client_phone'),
-        ]); 
+            'status' => 'active',
+            'uuid' => $uuid
+        ]);
 
         $appointment->has_newsletter = $request->get('has_newsletter') == 'on' ? true : false;
 
@@ -137,7 +128,7 @@ class AppointmentController extends Controller
     {
         $edit = false;
         $users = AppointmentUser::all();
-        return view('msm-appointments::create_edit', compact('edit','appointment','users'));
+        return view('msm-appointments::create_edit', compact('edit', 'appointment', 'users'));
     }
 
     /**
@@ -162,35 +153,37 @@ class AppointmentController extends Controller
         $user = AppointmentUser::findOrFail($request->get('user_id'));
 
         $calendarId = $user->calendar_id;
-        $startDate = Carbon::parse($request->get('start_date'),'Asia/Tbilisi');
+        $startDate = Carbon::parse($request->get('start_date'), 'Asia/Tbilisi');
         $endDate = clone $startDate;
         $endDate = $endDate->addHour();
-        $events = Event::get(Carbon::now(),null,[],$calendarId);
-        
+        $events = Event::get(Carbon::now(), null, [], $calendarId);
+
         foreach ($events as $key => $event) {
-            $eventStart = Carbon::parse($event->googleEvent->start->dateTime,'Asia/Tbilisi');
-            $eventEnd = Carbon::parse($event->googleEvent->end->dateTime,'Asia/Tbilisi');
-            if ($startDate->gte($eventStart) && $eventEnd->gte($startDate) ||
-                $endDate->gte($eventStart) && $eventEnd->gte($endDate) || 
-                $startDate->lte($eventStart) && $endDate->gte($eventEnd)) {
+            $eventStart = Carbon::parse($event->googleEvent->start->dateTime, 'Asia/Tbilisi');
+            $eventEnd = Carbon::parse($event->googleEvent->end->dateTime, 'Asia/Tbilisi');
+            if (
+                $startDate->gte($eventStart) && $eventEnd->gte($startDate) ||
+                $endDate->gte($eventStart) && $eventEnd->gte($endDate) ||
+                $startDate->lte($eventStart) && $endDate->gte($eventEnd)
+            ) {
                 return redirect()->back()->withErrors('This time is not availble');
             }
         }
         try {
-            $event = Event::find($appointment->event_id)->update([  
+            $event = Event::find($appointment->event_id)->update([
                 'name' => $request->get('name'),
-                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339),'Asia/Tbilisi'),
-                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339),'Asia/Tbilisi'),
-                'description' => $request->get('client_description') 
-                                . ' | Name: ' .$request->get('client_name')
-                                . ' | Email: ' .$request->get('client_email')
-                                . ' | Phone: ' .$request->get('client_phone')
-            ],$calendarId);
+                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
+                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
+                'description' => $request->get('client_description')
+                    . ' | Name: ' . $request->get('client_name')
+                    . ' | Email: ' . $request->get('client_email')
+                    . ' | Phone: ' . $request->get('client_phone')
+            ], $calendarId);
         } catch (\Throwable $th) {
             return redirect()->back()->withErrors('Operation Failed');
         }
-        
-        Appointment::where('id',$appointment->id)->update([
+
+        Appointment::where('id', $appointment->id)->update([
             'name' => $request->get('name'),
             'start_date' => $event->googleEvent->start->dateTime,
             'appointment_user_id' => $user->id,
@@ -200,7 +193,7 @@ class AppointmentController extends Controller
             'client_name' => $request->get('client_name'),
             'client_email' => $request->get('client_email'),
             'client_phone' => $request->get('client_phone'),
-        ]); 
+        ]);
 
         return redirect()->back();
     }
@@ -218,5 +211,138 @@ class AppointmentController extends Controller
         $appointment->delete();
 
         return redirect()->back();
+    }
+
+    public function destroyWithUuid($uuid)
+    {
+        $appointment = Appointment::where('uuid', $uuid)->where('status', '!=', 'canceled')->first();
+        if (!$appointment) {
+            return redirect()->back()->withErrors('Appointment not found');
+        }
+
+        $user = AppointmentUser::findOrFail($appointment->appointment_user_id);
+        Event::find($appointment->event_id, $user->calendar_id)->delete();
+        $appointment->status = 'canceled';
+        $appointment->save();
+
+        return redirect()->back()->with(['message' => 'Appointment canceled successfully']);
+    }
+
+    public function updateWithUuid(Request $request, $uuid)
+    {
+        $this->validate($request, [
+            'start_date' => 'string',
+            'start_time' => 'string',
+        ]);
+
+        $appointment = Appointment::where('uuid', $uuid)->where('status', '!=', 'canceled')->first();
+
+        if (!$appointment) {
+            return redirect()->back()->withErrors('Appointment not found');
+        }
+
+        $user = AppointmentUser::findOrFail($appointment->appointment_user_id);
+        $requestDate = Carbon::createFromFormat('d/m/Y', $request->get('start_date'))->format('Y-m-d') . 'T' . $request->get('start_time');
+
+        $calendarId = $user->calendar_id;
+        $startDate = Carbon::parse($requestDate, 'Asia/Tbilisi');
+        $endDate = clone $startDate;
+        $endDate = $endDate->addHour();
+        $events = Event::get(Carbon::now(), null, [], $calendarId);
+
+        if (!self::checkValidDate($events, $startDate, $endDate)) {
+            return redirect()->back()->withErrors('This time is not availble');
+        }
+        
+        try {
+            $event = Event::find($appointment->event_id,$calendarId)->update([
+                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
+                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
+            ]);
+        } catch (\Throwable $th) {
+            return redirect()->back()->withErrors('Operation Failed');
+        }
+
+        $link = self::getLink($event, $calendarId);
+        
+        $appointment->start_date = $event->googleEvent->start->dateTime;
+        $appointment->event_id = $event->googleEvent->id;
+        $appointment->link = $link;
+        $appointment->status = 'updated';
+        $appointment->save();
+
+        return redirect()->back()->with(['message' => 'Appointment updated successfully']);
+    }
+
+
+    public function findAppointmentByUuid(Request $request)
+    {
+        if (!$request->ajax()) {
+            return false;
+        }
+        $this->validate($request, [
+            'uuid' => 'required|string',
+            // 'g-recaptcha-response' => 'required|captcha'
+        ]);
+        $appointment = Appointment::where('uuid', $request->get('uuid'))->where('status', '!=', 'canceled')->first();
+        if (!$appointment) {
+            $result['type'] = 'error';
+            $result['title'] = __('notify.error');
+            $result['msg'] = __('general.Item Not Found');
+        } else {
+            $result['type'] = 'success';
+            $appointment->user_name = $appointment->user->name;
+            $appointment->start_date = Carbon::parse($appointment->start_date)->toDateTimeString();
+            $appointment->end_date = Carbon::parse($appointment->start_date)->addHour()->toDateTimeString();
+            $result['appointment'] = $appointment;
+        }
+        return json_encode($result); 
+    }
+
+
+    public static function checkValidDate($events, $startDate, $endDate)
+    {
+        foreach ($events as $key => $event) {
+            $eventStart = Carbon::parse($event->googleEvent->start->dateTime, 'Asia/Tbilisi');
+            $eventEnd = Carbon::parse($event->googleEvent->end->dateTime, 'Asia/Tbilisi');
+            if (
+                $startDate->gt($eventStart) && $startDate->lt($eventEnd) ||
+                $endDate->gt($eventStart) && $endDate->lt($eventEnd) ||
+                $startDate->lte($eventStart) && $endDate->gte($eventEnd)
+            ) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static function getUUID($uuid = null)
+    {
+        if (is_null($uuid)) {
+            return self::getUUID(Str::random(8));
+        }
+
+        if (!Appointment::where('uuid', $uuid)->exists()) {
+            return $uuid;
+        }
+
+        return self::getUUID(Str::random(8));
+    }
+
+    public static function getLink($event, $calendarId)
+    {
+        $eventLink = $event->googleEvent->htmlLink;
+        $url_components = parse_url($eventLink);
+        parse_str($url_components['query'], $eventUrlParams);
+        $eid = $eventUrlParams['eid'];
+
+        $params = [
+            'action' => 'TEMPLATE',
+            'tmeid' => $eid,
+            'tmsrc' => $calendarId
+        ];
+
+        $link = "https://calendar.google.com/event?" . http_build_query($params);
+        return $link;
     }
 }
