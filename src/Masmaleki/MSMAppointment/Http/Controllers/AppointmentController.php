@@ -48,32 +48,35 @@ class AppointmentController extends Controller
     {
         $this->validate($request, [
             'name' => 'required|string',
-            'start_date' => 'string',
-            'start_time' => 'string',
-            'user_id' => 'string',
-            'client_description' => 'string',
-            'client_name' => 'string',
-            'client_email' => 'string',
-            'client_phone' => 'string',
+            'start_date' => 'required|string',
+            'start_time' => 'required|string',
+            'user_id' => 'required|string',
+            'client_description' => 'required|string',
+            'client_name' => 'required|string',
+            'client_email' => 'required|string',
+            'client_phone' => 'required|string',
         ]);
+
+        $timezoneName = config('MSMAppointment.timezone');
+
         $requestDate = Carbon::createFromFormat('d/m/Y', $request->get('start_date'))->format('Y-m-d') . 'T' . $request->get('start_time');
         $user = AppointmentUser::findOrFail($request->get('user_id'));
 
         $calendarId = $user->calendar_id;
-        $startDate = Carbon::parse($requestDate, 'Asia/Tbilisi');
+        $startDate = Carbon::parse($requestDate, $timezoneName);
         $endDate = clone $startDate;
         $endDate = $endDate->addHour();
         $events = Event::get(Carbon::now(), null, [], $calendarId);
 
-        if (!self::checkValidDate($events, $startDate, $endDate)) {
+        if (!self::checkValidDate($events, $startDate, $endDate, $timezoneName)) {
             return redirect()->back()->withErrors('This time is not availble');
         }
 
         try {
             $event = Event::create([
                 'name' => $request->get('name'),
-                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
-                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
+                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), $timezoneName),
+                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), $timezoneName),
                 'description' => $request->get('client_description')
                     . ' | Name: ' . $request->get('client_name')
                     . ' | Email: ' . $request->get('client_email')
@@ -98,6 +101,7 @@ class AppointmentController extends Controller
             'client_name' => $request->get('client_name'),
             'client_email' => $request->get('client_email'),
             'client_phone' => $request->get('client_phone'),
+            'timezone' => $timezoneName,
             'status' => 'active',
             'uuid' => $uuid
         ]);
@@ -150,17 +154,19 @@ class AppointmentController extends Controller
             'client_phone' => 'string',
         ]);
 
+        $timezoneName = $appointment->timezone;
+
         $user = AppointmentUser::findOrFail($request->get('user_id'));
 
         $calendarId = $user->calendar_id;
-        $startDate = Carbon::parse($request->get('start_date'), 'Asia/Tbilisi');
+        $startDate = Carbon::parse($request->get('start_date'), $timezoneName);
         $endDate = clone $startDate;
         $endDate = $endDate->addHour();
         $events = Event::get(Carbon::now(), null, [], $calendarId);
 
         foreach ($events as $key => $event) {
-            $eventStart = Carbon::parse($event->googleEvent->start->dateTime, 'Asia/Tbilisi');
-            $eventEnd = Carbon::parse($event->googleEvent->end->dateTime, 'Asia/Tbilisi');
+            $eventStart = Carbon::parse($event->googleEvent->start->dateTime, $timezoneName);
+            $eventEnd = Carbon::parse($event->googleEvent->end->dateTime, $timezoneName);
             if (
                 $startDate->gte($eventStart) && $eventEnd->gte($startDate) ||
                 $endDate->gte($eventStart) && $eventEnd->gte($endDate) ||
@@ -172,8 +178,8 @@ class AppointmentController extends Controller
         try {
             $event = Event::find($appointment->event_id)->update([
                 'name' => $request->get('name'),
-                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
-                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
+                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), $timezoneName),
+                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), $timezoneName),
                 'description' => $request->get('client_description')
                     . ' | Name: ' . $request->get('client_name')
                     . ' | Email: ' . $request->get('client_email')
@@ -241,23 +247,24 @@ class AppointmentController extends Controller
             return redirect()->back()->withErrors('Appointment not found');
         }
 
+        $timezoneName = $appointment->timezone;
         $user = AppointmentUser::findOrFail($appointment->appointment_user_id);
         $requestDate = Carbon::createFromFormat('d/m/Y', $request->get('start_date'))->format('Y-m-d') . 'T' . $request->get('start_time');
 
         $calendarId = $user->calendar_id;
-        $startDate = Carbon::parse($requestDate, 'Asia/Tbilisi');
+        $startDate = Carbon::parse($requestDate, $timezoneName);
         $endDate = clone $startDate;
         $endDate = $endDate->addHour();
         $events = Event::get(Carbon::now(), null, [], $calendarId);
 
-        if (!self::checkValidDate($events, $startDate, $endDate)) {
+        if (!self::checkValidDate($events, $startDate, $endDate, $timezoneName)) {
             return redirect()->back()->withErrors('This time is not availble');
         }
         
         try {
             $event = Event::find($appointment->event_id,$calendarId)->update([
-                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
-                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), 'Asia/Tbilisi'),
+                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), $timezoneName),
+                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), $timezoneName),
             ]);
         } catch (\Throwable $th) {
             return redirect()->back()->withErrors('Operation Failed');
@@ -300,11 +307,11 @@ class AppointmentController extends Controller
     }
 
 
-    public static function checkValidDate($events, $startDate, $endDate)
+    public static function checkValidDate($events, $startDate, $endDate, $timezoneName)
     {
         foreach ($events as $key => $event) {
-            $eventStart = Carbon::parse($event->googleEvent->start->dateTime, 'Asia/Tbilisi');
-            $eventEnd = Carbon::parse($event->googleEvent->end->dateTime, 'Asia/Tbilisi');
+            $eventStart = Carbon::parse($event->googleEvent->start->dateTime, $timezoneName);
+            $eventEnd = Carbon::parse($event->googleEvent->end->dateTime, $timezoneName);
             if (
                 $startDate->gt($eventStart) && $startDate->lt($eventEnd) ||
                 $endDate->gt($eventStart) && $endDate->lt($eventEnd) ||

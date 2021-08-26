@@ -29,6 +29,7 @@ class Appointment extends Model
         'client_phone',
         'client_description',
         'uuid',
+        'timezone',
         'status'
     ];
 

@@ -31,4 +31,6 @@ return [
         'web'
     ],
 
+    'timezone' => 'Europe/Paris',
+
 ];
