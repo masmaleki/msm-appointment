@@ -3,6 +3,8 @@
 namespace Masmaleki\MSMAppointment\Models;
 
 use Carbon\Carbon;
+use DateTime;
+use DateTimeZone;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\GoogleCalendar\Event;
 
@@ -29,8 +31,9 @@ class AppointmentUser extends Model
             $events = Event::get(Carbon::now(),null,[],$user->calendar_id);
             $disableDates[$user->id] = [];
             foreach ($events as $key => $event) {
-                $startDate = Carbon::parse($event->googleEvent->start->dateTime);
-                $endDate = Carbon::parse($event->googleEvent->end->dateTime);
+                
+                $startDate = self::convertDateByTimezone($event->googleEvent->start->dateTime);
+                $endDate   = self::convertDateByTimezone($event->googleEvent->end->dateTime);
                 
                 $tempDate = clone $startDate;
                 $dif = $startDate->diff($endDate)->format('%H');
@@ -62,4 +65,14 @@ class AppointmentUser extends Model
         }
         return $disableDates;
     }
+    public static function convertDateByTimezone($date) 
+    { 
+        $timezone = config('MSMAppointment.timezone');
+        $date = new DateTime($date);
+        $tz = $date->getTimezone();
+        $tzName = $tz->getName();
+        $date->setTimezone(new DateTimeZone($tz->getName()));
+        return Carbon::parse($date->setTimezone(new DateTimeZone($timezone)));
+    } 
+
 }
