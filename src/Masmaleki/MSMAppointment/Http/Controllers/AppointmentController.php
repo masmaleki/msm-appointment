@@ -72,11 +72,14 @@ class AppointmentController extends Controller
             return redirect()->back()->withErrors('This time is not availble');
         }
 
+        $generatedStartDate = Carbon::parse($startDate->format(DateTime::RFC3339), $timezoneName);
+        $generatedEndDate = Carbon::parse($endDate->format(DateTime::RFC3339), $timezoneName);
+
         try {
             $event = Event::create([
                 'name' => $request->get('name'),
-                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), $timezoneName),
-                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), $timezoneName),
+                'startDateTime' => $generatedStartDate,
+                'endDateTime' => $generatedEndDate,
                 'description' => $request->get('client_description')
                     . ' | Name: ' . $request->get('client_name')
                     . ' | Email: ' . $request->get('client_email')
@@ -93,7 +96,7 @@ class AppointmentController extends Controller
 
         $appointment = Appointment::create([
             'name' => $request->get('name'),
-            'start_date' => $event->googleEvent->start->dateTime,
+            'start_date' => $generatedStartDate,
             'appointment_user_id' => $user->id,
             'event_id' => $event->googleEvent->id,
             'link' => $link,
@@ -260,11 +263,15 @@ class AppointmentController extends Controller
         if (!self::checkValidDate($events, $startDate, $endDate, $timezoneName)) {
             return redirect()->back()->withErrors('This time is not availble');
         }
+
+        $generatedStartDate = Carbon::parse($startDate->format(DateTime::RFC3339), $timezoneName);
+        $generatedEndDate = Carbon::parse($endDate->format(DateTime::RFC3339), $timezoneName);
+
         
         try {
             $event = Event::find($appointment->event_id,$calendarId)->update([
-                'startDateTime' => Carbon::parse($startDate->format(DateTime::RFC3339), $timezoneName),
-                'endDateTime' => Carbon::parse($endDate->format(DateTime::RFC3339), $timezoneName),
+                'startDateTime' => $generatedStartDate,
+                'endDateTime' => $generatedEndDate,
             ]);
         } catch (\Throwable $th) {
             return redirect()->back()->withErrors('Operation Failed');
@@ -272,7 +279,7 @@ class AppointmentController extends Controller
 
         $link = self::getLink($event, $calendarId);
         
-        $appointment->start_date = $event->googleEvent->start->dateTime;
+        $appointment->start_date = $generatedStartDate;
         $appointment->event_id = $event->googleEvent->id;
         $appointment->link = $link;
         $appointment->status = 'updated';
